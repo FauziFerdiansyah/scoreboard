@@ -108,6 +108,13 @@
       padding: 5px;
       font-size: 1rem;
     }
+    body.fullscreen-sim {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
   </style>
 </head>
 <body>
@@ -217,6 +224,12 @@
 
     function toggleFullscreen() {
       const btn = document.getElementById('fullscreenBtn');
+      if (navigator.userAgent.includes('iPhone')) {
+        document.body.classList.toggle('fullscreen-sim');
+        btn.textContent = document.body.classList.contains('fullscreen-sim') ? 'Exit Fullscreen' : 'Fullscreen';
+        return;
+      }
+
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().then(() => {
           btn.textContent = 'Exit Fullscreen';
@@ -227,6 +240,7 @@
         });
       }
     }
+
 
     function toggleToolbar() {
       const bar = document.getElementById('toolbar');
