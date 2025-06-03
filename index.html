@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Badminton Scoreboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Orbitron', Arial, sans-serif;
+    }
+    .container {
+      display: flex;
+      height: 100%;
+    }
+    .side {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-weight: bold;
+      font-size: 30vw;
+      position: relative;
+      transition: background-color 0.3s;
+    }
+    .blue { background-color: #5B9DFF; }
+    .red { background-color: #FF6978; }
+    .minus-btn {
+      position: absolute;
+      top: 10px;
+      font-size: 2vw;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+    }
+    .minus-blue { left: 10px; }
+    .minus-red { right: 10px; }
+    .name {
+      font-size: 2vw;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+    .toolbar {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      padding: 10px;
+      border-radius: 10px;
+      text-align: center;
+      z-index: 10;
+      transition: max-height 0.3s ease, opacity 0.3s ease;
+    }
+    .toolbar.collapsed .tools {
+      display: none;
+    }
+    .toolbar .toggle-btn {
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+    .toolbar .tools {
+      margin-top: 5px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .toolbar button {
+      padding: 5px 10px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #nameModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    #nameModalContent {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 300px;
+    }
+    #nameModalContent input {
+      padding: 5px;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar" id="toolbar">
+    <div class="toggle-btn" onclick="toggleToolbar()">🔽</div>
+    <div id="timer">00:00</div>
+    <div class="tools">
+      <button onclick="resetGame()">Reset</button>
+      <button onclick="toggleTimer()" id="timerBtn">Start</button>
+      <button onclick="toggleFullscreen()" id="fullscreenBtn">Fullscreen</button>
+      <button onclick="switchSides()">Switch</button>
+      <button onclick="openNameModal()">Edit Nama</button>
+    </div>
+  </div>
+  <div class="container">
+    <div class="side blue" id="blueSide" onclick="updateScore('blue')" ontouchstart="touchStart(event, 'blue')" ontouchend="touchEnd(event, 'blue')">
+      <button class="minus-btn minus-blue" onclick="event.stopPropagation(); changeScore('blue', -1)">−</button>
+      <div class="name" id="blueName"></div>
+      <div class="score" id="blueScore">0</div>
+    </div>
+    <div class="side red" id="redSide" onclick="updateScore('red')" ontouchstart="touchStart(event, 'red')" ontouchend="touchEnd(event, 'red')">
+      <button class="minus-btn minus-red" onclick="event.stopPropagation(); changeScore('red', -1)">−</button>
+      <div class="name" id="redName"></div>
+      <div class="score" id="redScore">0</div>
+    </div>
+  </div>
+
+  <!-- Name Modal -->
+  <div id="nameModal" style="display:none;">
+    <div id="nameModalContent">
+      <label>Nama Pemain Biru:</label>
+      <input type="text" id="blueInput" placeholder="Nama Pemain Biru">
+      <label>Nama Pemain Merah:</label>
+      <input type="text" id="redInput" placeholder="Nama Pemain Merah">
+      <button onclick="saveNames()">Simpan</button>
+    </div>
+  </div>
+
+  <script>
+    let scores = { blue: 0, red: 0 };
+    let startTime, timerInterval;
+    let isRunning = false;
+    let touchStartX = 0;
+
+    function updateScore(color) {
+      if (scores[color] === 0 && !isRunning) startTimer();
+      scores[color]++;
+      updateDisplay(color);
+      vibrate();
+    }
+
+    function changeScore(color, delta) {
+      if (scores[color] + delta >= 0) {
+        scores[color] += delta;
+        updateDisplay(color);
+        vibrate();
+      }
+    }
+
+    function updateDisplay(color) {
+      document.getElementById(color + 'Score').textContent = scores[color];
+    }
+
+    function resetGame() {
+      scores = { blue: 0, red: 0 };
+      updateDisplay('blue');
+      updateDisplay('red');
+      clearInterval(timerInterval);
+      document.getElementById('timer').textContent = '00:00';
+      isRunning = false;
+      document.getElementById('timerBtn').textContent = 'Start';
+      startTime = null;
+    }
+
+    function toggleTimer() {
+      if (isRunning) {
+        clearInterval(timerInterval);
+        document.getElementById('timerBtn').textContent = 'Resume';
+      } else {
+        startTimer();
+      }
+      isRunning = !isRunning;
+    }
+
+    function startTimer() {
+      if (!startTime) startTime = Date.now();
+      timerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const min = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        const sec = String(elapsed % 60).padStart(2, '0');
+        document.getElementById('timer').textContent = `${min}:${sec}`;
+      }, 1000);
+      document.getElementById('timerBtn').textContent = 'Pause';
+      isRunning = true;
+    }
+
+    function switchSides() {
+      [scores.blue, scores.red] = [scores.red, scores.blue];
+      updateDisplay('blue');
+      updateDisplay('red');
+
+      const blueName = document.getElementById('blueName').textContent;
+      const redName = document.getElementById('redName').textContent;
+      document.getElementById('blueName').textContent = redName;
+      document.getElementById('redName').textContent = blueName;
+    }
+
+    function toggleFullscreen() {
+      const btn = document.getElementById('fullscreenBtn');
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(() => {
+          btn.textContent = 'Exit Fullscreen';
+        });
+      } else {
+        document.exitFullscreen().then(() => {
+          btn.textContent = 'Fullscreen';
+        });
+      }
+    }
+
+    function toggleToolbar() {
+      const bar = document.getElementById('toolbar');
+      bar.classList.toggle('collapsed');
+      bar.querySelector('.toggle-btn').textContent = bar.classList.contains('collapsed') ? '🔼' : '🔽';
+    }
+
+    function vibrate() {
+      if (navigator.vibrate) navigator.vibrate(100);
+    }
+
+    function touchStart(event, color) {
+      touchStartX = event.changedTouches[0].screenX;
+    }
+
+    function touchEnd(event, color) {
+      const deltaX = event.changedTouches[0].screenX - touchStartX;
+      if (deltaX > 50) updateScore(color);
+      else if (deltaX < -50) changeScore(color, -1);
+    }
+
+    function openNameModal() {
+      document.getElementById('nameModal').style.display = 'flex';
+    }
+
+    function saveNames() {
+      const blueInput = document.getElementById('blueInput').value.trim();
+      const redInput = document.getElementById('redInput').value.trim();
+      document.getElementById('nameModal').style.display = 'none';
+      document.getElementById('blueName').textContent = blueInput || (redInput ? 'Player' : '');
+      document.getElementById('redName').textContent = redInput || (blueInput ? 'Player' : '');
+    }
+
+    window.onload = function () {
+      openNameModal();
+    };
+  </script>
+</body>
+</html>
